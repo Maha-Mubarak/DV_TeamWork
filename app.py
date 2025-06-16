@@ -21,7 +21,7 @@ st.set_page_config(
 
 @st.cache_data
 def load_data():
-    return pd.read_csv('data/dataset.csv')
+    return pd.read_csv('./data/dataset.csv')
 
 df = load_data()
 
@@ -29,7 +29,7 @@ def load_css(file_name):
     with open(file_name) as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-load_css('style.css')
+load_css('./style.css')
 
 if 'active_tab' not in st.session_state:
     st.session_state.active_tab = "Track's Popularity"
