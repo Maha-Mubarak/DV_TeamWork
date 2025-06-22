@@ -1,22 +1,26 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from .utils import df, get_modern_layout
+from .utils import get_modern_layout
 
-def create_energy_time_analysis():
-    sample_df = df.sample(n=min(12000, len(df)), random_state=42)
+def create_energy_time_analysis(data=None):
+    if data is None:
+        import pandas as pd
+        data = pd.read_csv('data/dataset.csv')
+    
+    sample_df = data.sample(n=min(12000, len(data)), random_state=42)
     
     sample_df['energy_category'] = sample_df['energy'].apply(lambda x: 'High Energy (0.7+)' if x >= 0.7 else 'Medium Energy (0.4-0.7)' if x >= 0.4 else 'Low Energy (0-0.4)')
     
     fig = make_subplots(
         rows=2, cols=1,
         subplot_titles=[
-            'Energy vs Popularity Correlation',
-            'Energy Category Comparison'
+            '<b>Energy vs Popularity Correlation</b>',
+            '<b>Energy Category Comparison</b>'
         ],
         specs=[[{"type": "xy"}],
                [{"type": "xy"}]],
-        vertical_spacing=0.25,
-        row_heights=[0.55, 0.45]
+        vertical_spacing=0.45,
+        row_heights=[0.6, 0.4]
     )
     
     ordered_categories = ['Low Energy (0-0.4)', 'Medium Energy (0.4-0.7)', 'High Energy (0.7+)']
@@ -37,23 +41,25 @@ def create_energy_time_analysis():
                     name=category,
                     marker=dict(
                         color=colors[category],
-                        size=4,
-                        opacity=0.6,
-                        line=dict(width=0.3, color='#FFFFFF')
+                        size=5,
+                        opacity=0.7,
+                        line=dict(width=0.5, color='#FFFFFF')
                     ),
                     hovertemplate=
-                    "<b>%{customdata[0]}</b><br>" +
-                    "Energy: <b>%{x:.2f}</b><br>" +
+                    "<b>Track Information</b><br>" +
+                    "Track: <b>%{customdata[0]}</b><br>" +
+                    "Artist: <b>%{customdata[1]}</b><br>" +
+                    "Energy: <b>%{x:.3f}</b><br>" +
                     "Popularity: <b>%{y}</b><br>" +
                     "Category: <b>" + category + "</b>" +
                     "<extra></extra>",
-                    customdata=category_data[['track_name']].values
+                    customdata=category_data[['track_name', 'artists']].values
                 ),
                 row=1, col=1
             )
     
-    energy_stats = df.groupby(df['energy'].apply(lambda x: 'High Energy (0.7+)' if x >= 0.7 else 'Medium Energy (0.4-0.7)' if x >= 0.4 else 'Low Energy (0-0.4)'))['popularity'].agg(['mean', 'count']).reset_index()
-    energy_stats.columns = ['energy_category', 'avg_popularity', 'track_count']
+    energy_stats = data.groupby(data['energy'].apply(lambda x: 'High Energy (0.7+)' if x >= 0.7 else 'Medium Energy (0.4-0.7)' if x >= 0.4 else 'Low Energy (0-0.4)'))['popularity'].agg(['mean', 'count', 'std']).reset_index()
+    energy_stats.columns = ['energy_category', 'avg_popularity', 'track_count', 'std_popularity']
     
     energy_stats['order'] = energy_stats['energy_category'].map({'Low Energy (0-0.4)': 0, 'Medium Energy (0.4-0.7)': 1, 'High Energy (0.7+)': 2})
     energy_stats = energy_stats.sort_values('order')
@@ -66,15 +72,16 @@ def create_energy_time_analysis():
                 color=[colors[cat] for cat in energy_stats['energy_category']],
                 line=dict(color='#FFFFFF', width=1)
             ),
-            text=energy_stats['avg_popularity'].round(1),
+            text=[f'{val:.1f}' for val in energy_stats['avg_popularity']],
             textposition='outside',
-            textfont=dict(color='#FFFFFF', size=12),
+            textfont=dict(color='#FFFFFF', size=12, family='Inter'),
             hovertemplate=
             "<b>%{x}</b><br>" +
-            "Avg Popularity: <b>%{y:.1f}</b><br>" +
-            "Track Count: <b>%{customdata:,}</b>" +
+            "Average Popularity: <b>%{y:.1f}</b><br>" +
+            "Total Tracks: <b>%{customdata[0]:,}</b><br>" +
+            "Std Deviation: <b>%{customdata[1]:.1f}</b>" +
             "<extra></extra>",
-            customdata=energy_stats['track_count'],
+            customdata=energy_stats[['track_count', 'std_popularity']].values,
             showlegend=False
         ),
         row=2, col=1
@@ -82,12 +89,12 @@ def create_energy_time_analysis():
     
     layout_update = get_modern_layout()
     layout_update.update(dict(
-        height=400,
+        height=650,
         title_text="",
         legend=dict(
             orientation="h",
-            yanchor="top",
-            y=1.05,
+            yanchor="bottom",
+            y=1.08,
             xanchor="center",
             x=0.5,
             bgcolor="rgba(25, 25, 25, 0.9)",
@@ -95,38 +102,44 @@ def create_energy_time_analysis():
             borderwidth=1,
             font=dict(color='#FFFFFF', size=11)
         ),
-        margin=dict(l=60, r=60, t=100, b=60)
+        margin=dict(l=70, r=70, t=180, b=100)
     ))
     
     fig.update_xaxes(
-        title_text="Energy Level", 
+        title_text="<b>Energy Level (0.0 - 1.0)</b>", 
         row=1, col=1,
         gridcolor="rgba(29, 185, 84, 0.2)",
         color='#B8B8B8',
-        tickfont=dict(size=11)
+        tickfont=dict(size=11),
+        titlefont=dict(size=12)
     )
     fig.update_yaxes(
-        title_text="Popularity Score", 
+        title_text="<b>Popularity Score</b>", 
         row=1, col=1,
         gridcolor="rgba(29, 185, 84, 0.2)",
         color='#B8B8B8',
-        tickfont=dict(size=11)
+        tickfont=dict(size=11),
+        titlefont=dict(size=12)
     )
     fig.update_xaxes(
-        title_text="Energy Category", 
-        row=2, col=1,
-        gridcolor="rgba(29, 185, 84, 0.2)",
-        color='#B8B8B8',
-        tickfont=dict(size=11)
-    )
-    fig.update_yaxes(
-        title_text="Average Popularity", 
+        title_text="<b>Energy Category</b>", 
         row=2, col=1,
         gridcolor="rgba(29, 185, 84, 0.2)",
         color='#B8B8B8',
         tickfont=dict(size=11),
-        range=[30, 37] 
+        titlefont=dict(size=12)
     )
+    fig.update_yaxes(
+        title_text="<b>Average Popularity</b>", 
+        row=2, col=1,
+        gridcolor="rgba(29, 185, 84, 0.2)",
+        color='#B8B8B8',
+        tickfont=dict(size=11),
+        titlefont=dict(size=12),
+        range=[energy_stats['avg_popularity'].min() * 0.95, energy_stats['avg_popularity'].max() * 1.1]
+    )
+    
+    fig.update_annotations(font=dict(size=14, color='#FFFFFF'))
     
     fig.update_layout(**layout_update)
     return fig 
